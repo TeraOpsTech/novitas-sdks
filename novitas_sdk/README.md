@@ -7,7 +7,7 @@ Plugs into your existing OTEL setup with **one line of code**. Your existing exp
 ## Installation
 
 ```bash
-pip install git+https://github.com/TeraOpsTech/novitas-sdks.git@working#subdirectory=logs-exporter-sdk
+pip3 install git+https://github.com/TeraOpsTech/novitas-sdks.git
 ```
 
 ## Quick Start
