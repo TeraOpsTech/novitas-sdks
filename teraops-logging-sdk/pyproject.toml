@@ -18,6 +18,9 @@ dependencies = [
     "opentelemetry-sdk>=1.20.0",
 ]
 
+[project.scripts]
+teraops = "teraops_logging.cli:main"
+
 [project.optional-dependencies]
 cloudscraper = ["cloudscraper>=1.2.0"]
 
