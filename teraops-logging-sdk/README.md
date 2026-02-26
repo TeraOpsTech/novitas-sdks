@@ -2,7 +2,7 @@
 
 OpenTelemetry Log Exporter for the TeraOps observability platform.
 
-Plugs into your existing OTEL setup with **one line of code**. Your existing exporters (Datadog, New Relic, Console, etc.) keep working — TeraOps is added alongside.
+Plugs into your existing OTEL setup. Your existing exporters (Datadog, New Relic, Console, etc.) keep working — TeraOps is added alongside.
 
 ## Installation
 
@@ -10,24 +10,50 @@ Plugs into your existing OTEL setup with **one line of code**. Your existing exp
 pip3 install git+https://github.com/TeraOpsTech/novitas-sdks.git#subdirectory=teraops-logging-sdk
 ```
 
+## Setup
+
+After installing, run this inside your project folder:
+
+```bash
+teraops init
+```
+
+This will:
+- Copy `teraops_logging/` folder into your project (visible, not hidden in venv)
+- Create `.env.example` with the required variables
+- Print exactly what to add to your code
+
 ## Quick Start
 
-### 1. Set your API key
+### Step 1: Set your credentials
 
-Add your TeraOps API URL and API key to your `.env` (both provided by TeraOps on signup):
+Copy `.env.example` to `.env` and fill in the values TeraOps gave you on signup:
 
 ```env
 TERAOPS_API_URL=your_teraops_api_url_here
 TERAOPS_API_KEY=your_teraops_api_key_here
 ```
 
-### 2. Attach to your existing OTEL LoggerProvider
+### Step 2: Add these imports to your otel_config.py
 
 ```python
 import os
+from dotenv import load_dotenv
 from teraops_logging import attach_teraops
 
-# Your existing logger_provider (however you created it)
+load_dotenv()
+```
+
+### Step 3: Add attach_teraops() after your LoggerProvider
+
+```python
+# Your existing OTEL setup (unchanged)
+logger_provider = LoggerProvider(resource=resource)
+logger_provider.add_log_record_processor(
+    SimpleLogRecordProcessor(ConsoleLogExporter())
+)
+
+# Add TeraOps — paste this after your existing exporters
 attach_teraops(
     logger_provider,
     api_url=os.getenv("TERAOPS_API_URL"),
@@ -35,7 +61,25 @@ attach_teraops(
 )
 ```
 
-That's it. One import, one function call. Your existing OTEL setup stays unchanged.
+### Step 4: Install python-dotenv (if not already installed)
+
+```bash
+pip3 install python-dotenv
+```
+
+That's it. Your existing stdout/console logs keep working. TeraOps now receives a copy of every log automatically.
+
+## What you need to add (summary)
+
+| What | Where |
+|------|-------|
+| `import os` | top of otel_config.py |
+| `from dotenv import load_dotenv` | top of otel_config.py |
+| `from teraops_logging import attach_teraops` | top of otel_config.py |
+| `load_dotenv()` | before setup_otel() function |
+| `attach_teraops(logger_provider, api_url=..., api_key=...)` | after your LoggerProvider setup |
+| `TERAOPS_API_URL=...` | .env file |
+| `TERAOPS_API_KEY=...` | .env file |
 
 ## Configuration options
 
@@ -87,8 +131,6 @@ The SDK automatically redacts secrets before sending:
 {"api_key": "***REDACTED***", "user_id": "123"}
 ```
 
-Patterns redacted: `password`, `api_key`, `secret_key`, `access_key`, `token`, `authorization`, `Bearer`, `AWS_*_KEY`, `private_key`, `credential`, `connection_string`, `database_url`, `ssn`, `credit_card`
-
 ## How it works
 
 ```
@@ -115,6 +157,7 @@ OTEL LoggerProvider
 - `opentelemetry-api >= 1.20.0`
 - `opentelemetry-sdk >= 1.20.0`
 - `requests >= 2.28.0`
+- `python-dotenv` (for loading .env file)
 
 ## Version
 
