@@ -7,7 +7,7 @@ Plugs into your existing OTEL setup with **one line of code**. Your existing exp
 ## Installation
 
 ```bash
-pip3 install git+https://github.com/TeraOpsTech/novitas-sdks.git
+pip3 install git+https://github.com/TeraOpsTech/novitas-sdks.git#subdirectory=teraops-logging-sdk
 ```
 
 ## Quick Start
