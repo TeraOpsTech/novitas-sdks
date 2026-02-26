@@ -7,6 +7,7 @@ This is all the customer needs to do:
 
     attach_teraops(
         logger_provider,
+        api_url=os.getenv("TERAOPS_API_URL"),
         api_key=os.getenv("TERAOPS_API_KEY"),
     )
 
@@ -24,7 +25,7 @@ from opentelemetry.sdk._logs.export import SimpleLogRecordProcessor
 def attach_teraops(
     logger_provider,
     api_key: str,
-    api_url: str = "https://back-poc.teraops.ai",
+    api_url: str = None,
     log_type: str = "otel",
     live_logs: bool = False,
     debug: bool = False,

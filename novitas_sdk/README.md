@@ -14,9 +14,10 @@ pip3 install git+https://github.com/TeraOpsTech/novitas-sdks.git
 
 ### 1. Set your API key
 
-Add your TeraOps API key to your `.env`:
+Add your TeraOps API URL and API key to your `.env` (both provided by TeraOps on signup):
 
 ```env
+TERAOPS_API_URL=your_teraops_api_url_here
 TERAOPS_API_KEY=your_teraops_api_key_here
 ```
 
@@ -29,6 +30,7 @@ from teraops_logging import attach_teraops
 # Your existing logger_provider (however you created it)
 attach_teraops(
     logger_provider,
+    api_url=os.getenv("TERAOPS_API_URL"),
     api_key=os.getenv("TERAOPS_API_KEY"),
 )
 ```
@@ -40,8 +42,8 @@ That's it. One import, one function call. Your existing OTEL setup stays unchang
 ```python
 attach_teraops(
     logger_provider,                          # required — your OTEL LoggerProvider
-    api_key="your_key",                       # required — TeraOps API key
-    api_url="https://back-poc.teraops.ai",    # optional — API URL (default: back-poc)
+    api_url="your_api_url",                   # required — TeraOps API URL (provided on signup)
+    api_key="your_api_key",                   # required — TeraOps API key (provided on signup)
     log_type="otel",                          # optional — log type identifier
     live_logs=False,                          # optional — True for real-time ingestion
     debug=False,                              # optional — True to see SDK debug logs

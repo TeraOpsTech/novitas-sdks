@@ -15,8 +15,8 @@ Usage:
     from teraops_logging.exporter import TeraOpsLogExporter
 
     exporter = TeraOpsLogExporter(
-        api_url="https://back-poc.teraops.ai",
-        api_key="your_teraops_api_key",
+        api_url=os.getenv("TERAOPS_API_URL"),
+        api_key=os.getenv("TERAOPS_API_KEY"),
     )
 
     processor = SimpleLogRecordProcessor(exporter)
@@ -135,7 +135,7 @@ class TeraOpsLogExporter(LogExporter):
     ):
         """
         Args:
-            api_url: TeraOps API base URL (e.g. "https://back-poc.teraops.ai")
+            api_url: TeraOps API URL (provided by TeraOps on signup)
             api_key: TeraOps API key (provided by TeraOps on signup)
             log_type: Log type identifier sent in X-Log-Type header
             timeout: HTTP request timeout in seconds
