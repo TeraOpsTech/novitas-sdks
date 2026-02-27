@@ -39,6 +39,7 @@ from opentelemetry.sdk._logs.export import LogExporter, LogExportResult
 from teraops_logging import __version__
 
 logger = logging.getLogger("teraops_exporter")
+logger.propagate = False  # Prevent SDK logs from leaking into OTEL pipeline
 
 
 # ============================================================================
