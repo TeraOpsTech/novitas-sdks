@@ -57,8 +57,6 @@ _SECRET_PATTERNS = [
     re.compile(r'(secret[_-]?key\s*[=:]\s*)[^\s,;"\'}\]]+', re.IGNORECASE),
     # access_key=xxx, access-key=xxx
     re.compile(r'(access[_-]?key\s*[=:]\s*)[^\s,;"\'}\]]+', re.IGNORECASE),
-    # token=xxx, auth_token=xxx
-    re.compile(r'((?:auth[_-]?)?token\s*[=:]\s*)[^\s,;"\'}\]]+', re.IGNORECASE),
     # Authorization: Bearer xxx, Authorization: Basic xxx
     re.compile(r'(authorization\s*[=:]\s*(?:bearer|basic|token)\s+)[^\s,;"\'}\]]+', re.IGNORECASE),
     # Bearer xxx (standalone)
@@ -87,7 +85,6 @@ _SENSITIVE_FIELD_NAMES = {
     "api_key", "apikey", "api-key",
     "access_key", "accesskey", "access-key",
     "private_key", "privatekey", "private-key",
-    "token", "auth_token", "access_token", "refresh_token",
     "authorization",
     "credential", "credentials",
     "connection_string", "connectionstring",
