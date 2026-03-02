@@ -295,20 +295,25 @@ class TeraOpsLogExporter(LogExporter):
 
         return text
 
-    def _filter_attributes(self, attrs: dict) -> dict:
+    def _filter_attributes(self, attrs: dict) -> tuple:
         """
-        Filter log attributes:
-        1. Block sensitive field names (value → ***REDACTED***)
-        2. Redact secrets in string values
-        3. Enforce size limits on values
-        4. Enforce max attributes per log
+        Filter log attributes.
+        Returns (filtered_attrs, format_issues) tuple.
+
+        Tracks issues:
+        - secrets_redacted: sensitive field names or secret patterns found
+        - attribute_truncated: attribute value exceeded 4KB limit
+        - attributes_dropped: more than 50 attributes, extras dropped
         """
         filtered = {}
+        issues = []
         count = 0
 
         for key, value in attrs.items():
             # Max attributes limit
             if count >= MAX_ATTRIBUTES_PER_LOG:
+                if "attributes_dropped" not in issues:
+                    issues.append("attributes_dropped")
                 if self.debug:
                     logger.warning(
                         f"Log has more than {MAX_ATTRIBUTES_PER_LOG} attributes — "
@@ -319,54 +324,76 @@ class TeraOpsLogExporter(LogExporter):
             # Block sensitive field names
             if key.lower().strip() in _SENSITIVE_FIELD_NAMES:
                 filtered[key] = "***REDACTED***"
+                if "secrets_redacted" not in issues:
+                    issues.append("secrets_redacted")
                 count += 1
                 continue
 
             # Redact secrets in string values
             if isinstance(value, str):
-                value = self._redact_secrets(value)
+                redacted_value = self._redact_secrets(value)
+                if redacted_value != value and "secrets_redacted" not in issues:
+                    issues.append("secrets_redacted")
+                value = redacted_value
 
                 # Enforce attribute value size limit
                 if len(value) > MAX_ATTRIBUTE_VALUE_SIZE:
                     value = value[:MAX_ATTRIBUTE_VALUE_SIZE] + "...[TRUNCATED]"
+                    if "attribute_truncated" not in issues:
+                        issues.append("attribute_truncated")
 
             filtered[key] = value
             count += 1
 
-        return filtered
+        return filtered, issues
 
     # ====================================================================
     # P0: Validate — Check required fields & normalize
     # ====================================================================
-    def _validate_and_normalize(self, log_entry: dict) -> dict:
+    def _validate_and_normalize(self, log_entry: dict) -> tuple:
         """
-        Validate and normalize a log entry:
-        1. Ensure required fields (timestamp, message, severity)
-        2. Normalize severity to uppercase
-        3. Truncate oversized messages
-        4. Redact secrets in message
+        Validate and normalize a log entry.
+        Returns (log_entry, format_issues) tuple.
+
+        Tracks issues:
+        - missing_message: no message or empty
+        - invalid_severity: severity was not a valid level
+        - message_truncated: message exceeded 64KB limit
+        - secrets_redacted_in_message: secrets found in message
         """
+        issues = []
+
         # Normalize severity to uppercase
         severity = log_entry.get("severity", "INFO")
+        original_severity = severity
         if isinstance(severity, str):
             severity = severity.upper().strip()
         valid_severities = {"TRACE", "DEBUG", "INFO", "WARN", "WARNING", "ERROR", "FATAL", "CRITICAL"}
         if severity not in valid_severities:
             severity = "INFO"
+            issues.append("invalid_severity")
         log_entry["severity"] = severity
 
-        # Redact secrets in message
+        # Check for missing message
         message = log_entry.get("message", "")
+        if not message or (isinstance(message, str) and not message.strip()):
+            issues.append("missing_message")
+
+        # Redact secrets in message
         if isinstance(message, str):
-            message = self._redact_secrets(message)
+            redacted_message = self._redact_secrets(message)
+            if redacted_message != message:
+                issues.append("secrets_redacted_in_message")
+            message = redacted_message
 
             # Enforce message size limit
             if len(message) > MAX_MESSAGE_SIZE:
                 message = message[:MAX_MESSAGE_SIZE] + "...[TRUNCATED]"
+                issues.append("message_truncated")
 
         log_entry["message"] = message
 
-        return log_entry
+        return log_entry, issues
 
     # ====================================================================
     # Core: Flush loop
@@ -434,18 +461,23 @@ class TeraOpsLogExporter(LogExporter):
                     "severity": log_record.severity_text or "INFO",
                 }
 
-                # Step 2: Validate & Normalize (P0)
-                log_entry = self._validate_and_normalize(log_entry)
+                # Step 2: Validate & Normalize (P0) — returns issues
+                log_entry, validate_issues = self._validate_and_normalize(log_entry)
 
                 # Step 3: Auto-enrich with system info (free for customer)
                 log_entry.update(self._system_info)
 
                 # Step 4: Filter attributes (P0) — redact secrets, enforce limits
-                filtered_attrs = self._filter_attributes(attrs_copy)
+                filtered_attrs, filter_issues = self._filter_attributes(attrs_copy)
                 log_entry.update(filtered_attrs)
 
                 # Step 5: Add SDK version
                 log_entry["_sdk_version"] = self._sdk_version
+
+                # Step 6: Add format status — tag every log
+                all_issues = validate_issues + filter_issues
+                log_entry["_formatted"] = len(all_issues) == 0
+                log_entry["_format_issues"] = all_issues
 
                 with self._lock:
                     # Drop oldest logs if buffer is full
