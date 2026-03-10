@@ -1,0 +1,19 @@
+{
+    "name": "teraops/logging-sdk",
+    "description": "TeraOps Log Exporter for OpenTelemetry PHP — collects, filters, and sends logs to TeraOps API",
+    "version": "0.1.0",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "TeraOps\\Logging\\": "src/"
+        }
+    },
+    "require": {
+        "php": ">=8.0",
+        "open-telemetry/sdk": "^1.0",
+        "guzzlehttp/guzzle": "^7.0"
+    },
+    "keywords": ["teraops", "opentelemetry", "otel", "logging", "exporter"],
+    "homepage": "https://github.com/TeraOpsTech/novitas-sdks"
+}
