@@ -445,6 +445,16 @@ class TeraOpsLogExporter(LogExporter):
                 log_record = otel_item.log_record if hasattr(otel_item, 'log_record') else otel_item
                 attrs = dict(log_record.attributes) if hasattr(log_record, 'attributes') and log_record.attributes else {}
 
+                # P0: Reject logs without service_label — required field
+                service_label = attrs.get("service_label")
+                if not service_label or not str(service_label).strip():
+                    if self.debug:
+                        logger.warning(
+                            f"Log rejected — missing or empty 'service_label' attribute. "
+                            f"Every log must include a 'service_label' (e.g. 'inference', 'rag', 'authentication')."
+                        )
+                    continue
+
                 custom_timestamp = attrs.get("timestamp")
 
                 if custom_timestamp:
