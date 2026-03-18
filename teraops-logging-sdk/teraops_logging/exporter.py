@@ -348,6 +348,52 @@ class TeraOpsLogExporter(LogExporter):
         return filtered, issues
 
     # ====================================================================
+    # P0: Mandatory Base Fields Check
+    # ====================================================================
+    _MANDATORY_BASE_FIELDS = ("app_name", "user_id", "customer_id")
+
+    def _check_mandatory_fields(self, attrs: dict) -> list:
+        """
+        Check that mandatory base fields (app_name, user_id, customer_id) are present.
+        Returns list of issues for missing fields. Does NOT reject the log.
+        """
+        issues = []
+        for field in self._MANDATORY_BASE_FIELDS:
+            val = attrs.get(field)
+            if val is None or (isinstance(val, str) and not val.strip()):
+                issues.append(f"missing_{field}")
+        return issues
+
+    # ====================================================================
+    # P0: AI Label Required Context Fields Check
+    # ====================================================================
+    _AI_LABEL_REQUIRED_FIELDS = {
+        "inference":        ["inference_model"],
+        "rag":              ["inference_model", "embedding_model", "vector_database"],
+        "image_generation": ["inference_model"],
+        "compute":          ["compute_type"],
+        "data_processing":  ["ai_service", "operation"],
+        "storage":          ["storage_type"],
+    }
+
+    def _check_ai_context_fields(self, attrs: dict) -> list:
+        """
+        If service_label is one of the 6 AI labels, check that its required
+        context fields are present. Returns list of issues. Does NOT reject the log.
+        """
+        service_label = attrs.get("service_label", "")
+        required = self._AI_LABEL_REQUIRED_FIELDS.get(service_label)
+        if not required:
+            return []
+
+        issues = []
+        for field in required:
+            val = attrs.get(field)
+            if val is None or (isinstance(val, str) and not val.strip()):
+                issues.append(f"missing_{field}")
+        return issues
+
+    # ====================================================================
     # P0: Validate — Check required fields & normalize
     # ====================================================================
     def _validate_and_normalize(self, log_entry: dict) -> tuple:
@@ -484,8 +530,14 @@ class TeraOpsLogExporter(LogExporter):
                 # Step 5: Add SDK version
                 log_entry["_sdk_version"] = self._sdk_version
 
-                # Step 6: Add format status — tag every log
-                all_issues = validate_issues + filter_issues
+                # Step 6: Check mandatory base fields (app_name, user_id, customer_id)
+                mandatory_issues = self._check_mandatory_fields(filtered_attrs)
+
+                # Step 7: Check required context fields for AI labels
+                context_issues = self._check_ai_context_fields(filtered_attrs)
+
+                # Step 8: Add format status — tag every log
+                all_issues = validate_issues + filter_issues + mandatory_issues + context_issues
                 log_entry["_formatted"] = len(all_issues) == 0
                 log_entry["_format_issues"] = all_issues
 
